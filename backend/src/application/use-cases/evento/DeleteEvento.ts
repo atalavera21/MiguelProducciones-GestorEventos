@@ -20,7 +20,6 @@ export class DeleteEvento {
     const contrato = await this.contratoRepository.findByEventoId(id);
     if (contrato) {
       const estadosProtegidos = [
-        ESTADOS_CONTRATO.ACTIVO,
         ESTADOS_CONTRATO.PENDIENTE_ENTREGA,
         ESTADOS_CONTRATO.TERMINADO,
       ];

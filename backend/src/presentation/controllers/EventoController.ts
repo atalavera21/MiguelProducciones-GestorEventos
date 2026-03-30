@@ -7,6 +7,7 @@ import { UpdateEvento } from '../../application/use-cases/evento/UpdateEvento';
 import { DeleteEvento } from '../../application/use-cases/evento/DeleteEvento';
 import { PrismaEventoRepository } from '../../infrastructure/repositories/PrismaEventoRepository';
 import { PrismaClienteRepository } from '../../infrastructure/repositories/PrismaClienteRepository';
+import { PrismaContratoRepository } from '../../infrastructure/repositories/PrismaContratoRepository';
 
 export class EventoController {
   private readonly getAllEventos: GetAllEventos;
@@ -16,15 +17,17 @@ export class EventoController {
   private readonly deleteEvento: DeleteEvento;
 
   constructor() {
-    const eventoRepository = new PrismaEventoRepository();
-    const clienteRepository = new PrismaClienteRepository();
+    const eventoRepository    = new PrismaEventoRepository();
+    const clienteRepository   = new PrismaClienteRepository();
+    const contratoRepository  = new PrismaContratoRepository();
 
-    this.getAllEventos = new GetAllEventos(eventoRepository);
+    this.getAllEventos  = new GetAllEventos(eventoRepository);
     this.getEventoById = new GetEventoById(eventoRepository);
-    // CreateEvento necesita ambos repositorios para validar que el cliente existe
-    this.createEvento = new CreateEvento(eventoRepository, clienteRepository);
-    this.updateEvento = new UpdateEvento(eventoRepository);
-    this.deleteEvento = new DeleteEvento(eventoRepository);
+    this.createEvento  = new CreateEvento(eventoRepository, clienteRepository);
+    this.updateEvento  = new UpdateEvento(eventoRepository);
+    // DeleteEvento necesita contratoRepository para verificar que no haya
+    // un contrato activo antes de eliminar el evento
+    this.deleteEvento  = new DeleteEvento(eventoRepository, contratoRepository);
   }
 
   // GET /api/eventos
@@ -40,7 +43,7 @@ export class EventoController {
   // GET /api/eventos/:id
   getById = async (req: Request, res: Response): Promise<void> => {
     try {
-      const evento = await this.getEventoById.execute(req.params.id as string);
+      const evento = await this.getEventoById.execute(Number(req.params.id));
       res.json({ data: evento });
     } catch (error) {
       res.status(404).json({ error: (error as Error).message });
@@ -60,7 +63,7 @@ export class EventoController {
   // PATCH /api/eventos/:id
   update = async (req: Request, res: Response): Promise<void> => {
     try {
-      const evento = await this.updateEvento.execute(req.params.id as string, req.body);
+      const evento = await this.updateEvento.execute(Number(req.params.id), req.body);
       res.json({ data: evento });
     } catch (error) {
       res.status(400).json({ error: (error as Error).message });
@@ -70,7 +73,7 @@ export class EventoController {
   // DELETE /api/eventos/:id
   remove = async (req: Request, res: Response): Promise<void> => {
     try {
-      await this.deleteEvento.execute(req.params.id as string);
+      await this.deleteEvento.execute(Number(req.params.id));
       res.status(204).send();
     } catch (error) {
       res.status(404).json({ error: (error as Error).message });

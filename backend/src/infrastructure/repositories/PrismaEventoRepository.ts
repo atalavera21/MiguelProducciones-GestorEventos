@@ -1,4 +1,4 @@
-import { type Evento, type CrearEventoDto, type ActualizarEventoDto, TipoEvento, EstadoEvento } from '../../domain/entities/Evento';
+import { type Evento, type CrearEventoDto, type ActualizarEventoDto } from '../../domain/entities/Evento';
 import { type IEventoRepository } from '../../domain/repositories/IEventoRepository';
 import prisma from '../database/prismaClient';
 
@@ -6,21 +6,21 @@ export class PrismaEventoRepository implements IEventoRepository {
 
   async findAll(): Promise<Evento[]> {
     const eventos = await prisma.evento.findMany({
-      orderBy: { fecha: 'asc' }, // Los próximos primero — útil para la agenda
+      orderBy: { fechaHora: 'asc' }, // Los próximos primero — útil para la agenda
     });
     return eventos.map(this.toDomain);
   }
 
-  async findById(id: string): Promise<Evento | null> {
+  async findById(id: number): Promise<Evento | null> {
     const evento = await prisma.evento.findUnique({ where: { id } });
     if (!evento) return null;
     return this.toDomain(evento);
   }
 
-  async findByClienteId(clienteId: string): Promise<Evento[]> {
+  async findByClienteId(idCliente: number): Promise<Evento[]> {
     const eventos = await prisma.evento.findMany({
-      where: { clienteId },
-      orderBy: { fecha: 'asc' },
+      where: { idCliente },
+      orderBy: { fechaHora: 'asc' },
     });
     return eventos.map(this.toDomain);
   }
@@ -28,17 +28,17 @@ export class PrismaEventoRepository implements IEventoRepository {
   async create(dto: CrearEventoDto): Promise<Evento> {
     const evento = await prisma.evento.create({
       data: {
-        nombre: dto.nombre,
-        fecha: dto.fecha,
-        tipoEvento: dto.tipoEvento,
-        notas: dto.notas,
-        clienteId: dto.clienteId,
+        idCliente:    dto.idCliente,
+        idTipoEvento: dto.idTipoEvento,
+        direccion:    dto.direccion,
+        fechaHora:    dto.fechaHora,
+        notas:        dto.notas,
       },
     });
     return this.toDomain(evento);
   }
 
-  async update(id: string, dto: ActualizarEventoDto): Promise<Evento | null> {
+  async update(id: number, dto: ActualizarEventoDto): Promise<Evento | null> {
     try {
       const evento = await prisma.evento.update({
         where: { id },
@@ -50,7 +50,7 @@ export class PrismaEventoRepository implements IEventoRepository {
     }
   }
 
-  async delete(id: string): Promise<boolean> {
+  async delete(id: number): Promise<boolean> {
     try {
       await prisma.evento.delete({ where: { id } });
       return true;
@@ -59,29 +59,21 @@ export class PrismaEventoRepository implements IEventoRepository {
     }
   }
 
-  private toDomain(prismaEvento: {
-    id: string;
-    nombre: string;
-    fecha: Date;
-    tipoEvento: string;
-    estado: string;
+  private toDomain(p: {
+    id: number;
+    idCliente: number;
+    idTipoEvento: number;
+    direccion: string;
+    fechaHora: Date;
     notas: string | null;
-    clienteId: string;
-    creadoEn: Date;
-    actualizadoEn: Date;
   }): Evento {
     return {
-      id: prismaEvento.id,
-      nombre: prismaEvento.nombre,
-      fecha: prismaEvento.fecha,
-      // Los enums de Prisma son strings internamente.
-      // Hacemos un cast explícito a nuestros enums de dominio.
-      tipoEvento: prismaEvento.tipoEvento as TipoEvento,
-      estado: prismaEvento.estado as EstadoEvento,
-      notas: prismaEvento.notas ?? undefined,
-      clienteId: prismaEvento.clienteId,
-      creadoEn: prismaEvento.creadoEn,
-      actualizadoEn: prismaEvento.actualizadoEn,
+      id:           p.id,
+      idCliente:    p.idCliente,
+      idTipoEvento: p.idTipoEvento,
+      direccion:    p.direccion,
+      fechaHora:    p.fechaHora,
+      notas:        p.notas ?? undefined,
     };
   }
 }

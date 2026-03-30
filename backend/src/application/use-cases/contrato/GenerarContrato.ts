@@ -41,10 +41,6 @@ export class GenerarContrato {
       throw new Error(`Tipo de evento ${evento.idTipoEvento} no encontrado`);
     }
 
-    // 4. Calcular saldo
-    const montoTotal = dto.montoAdelanto; // montoTotal vendrá de la suma de evento_servicios
-    const saldo = montoTotal - dto.montoAdelanto;
-
     // 5. Crear el contrato con datos desnormalizados
     return this.contratoRepository.create({
       ...dto,
