@@ -452,13 +452,21 @@ sequenceDiagram
     participant BE as Backend
     participant DB as PostgreSQL
 
-    U->>FE: Solicita PDF de proforma
+    Note over U,DB: Paso 1 — Crear la proforma
+    U->>FE: Llena el formulario con datos del cliente y servicios
+    FE->>BE: POST /api/proformas
+    BE->>DB: Guarda los datos de la proforma
+    DB-->>BE: Proforma creada con su ID
+    BE-->>FE: Confirmación + ID de la proforma
+
+    Note over U,DB: Paso 2 — Generar y descargar el PDF
+    U->>FE: Pulsa "Descargar PDF"
     FE->>BE: GET /api/proformas/:id/pdf
-    BE->>DB: Consulta datos de la proforma
+    BE->>DB: Consulta los datos de la proforma
     DB-->>BE: Datos completos
     BE->>BE: Genera PDF en memoria
     BE-->>FE: PDF como stream
-    FE-->>U: Descarga directa
+    FE-->>U: Descarga directa — envía por WhatsApp
 ```
 
 ### Generación de contrato desde evento
