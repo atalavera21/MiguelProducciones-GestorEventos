@@ -15,6 +15,9 @@ backend/src/generated/
 # Claude Code - configuracion local de la herramienta
 .claude/
 
+# Contexto para Claude Code - uso local únicamente
+CLAUDE.md
+
 # Logs
 *.log
 npm-debug.log*
