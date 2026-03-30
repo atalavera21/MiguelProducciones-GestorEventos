@@ -479,6 +479,21 @@ sequenceDiagram
     participant DB as PostgreSQL
     participant SB as Supabase
 
+    Note over U,DB: Paso 1 — Registrar el cliente
+    U->>FE: Llena los datos del cliente
+    FE->>BE: POST /api/clientes
+    BE->>DB: Guarda el cliente
+    DB-->>BE: Cliente creado con su ID
+
+    Note over U,DB: Paso 2 — Crear el evento con sus servicios
+    U->>FE: Llena fecha, dirección, tipo de evento y servicios
+    FE->>BE: POST /api/eventos
+    BE->>DB: Guarda el evento
+    BE->>DB: Guarda evento_servicios + detalle por cada servicio
+    DB-->>BE: Evento creado con su ID
+    BE-->>FE: Confirmación
+
+    Note over U,SB: Paso 3 — Generar el contrato desde el evento
     U->>FE: Pulsa "Generar contrato" en el evento
     FE->>BE: POST /api/contratos/desde-evento/:id
     BE->>DB: Consulta evento + cliente + servicios + detalles
@@ -489,6 +504,7 @@ sequenceDiagram
     SB-->>BE: URL permanente
     BE->>DB: Guarda pdfUrl en contrato
     BE-->>FE: Contrato creado con URL del PDF
+    FE-->>U: PDF disponible para descargar y firmar
 ```
 
 ---
