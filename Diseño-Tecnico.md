@@ -86,219 +86,358 @@ levantar el entorno de desarrollo local — no interviene en el despliegue en Ra
 
 ## Modelo de datos
 
-### Relaciones
+El centro del sistema es la entidad `eventos`. Todo contrato se genera desde un
+evento con un solo botón. La proforma es un documento independiente y desechable
+sin relación directa con ninguna otra entidad.
+
+Los detalles específicos de cada servicio se almacenan en **tablas propias tipadas**
+(`detalle_fotografia`, `detalle_filmacion`, `detalle_cuadrofirma`). Esto garantiza
+integridad referencial, validación a nivel de motor de base de datos y consultas
+limpias para el módulo de análisis. Cuando se agregue un servicio nuevo en el futuro,
+se crea su tabla de detalle correspondiente.
+
+### Diagrama de relaciones
 
 ```mermaid
 erDiagram
-    CLIENTES ||--o{ EVENTOS : "clienteId"
-    TIPOS_EVENTO ||--o{ EVENTOS : "tipoEventoId"
-    TIPOS_EVENTO ||--o{ CONTRATOS : "tipoEventoId"
-    EVENTOS ||--o{ PROFORMAS : "eventoId"
-    EVENTOS ||--o{ CONTRATOS : "eventoId"
-    PAQUETES ||--o{ PROFORMAS : "paqueteId"
-    PROFORMAS |o--o| CONTRATOS : "proformaId"
+    clientes {
+        serial id PK
+        varchar nombre
+        varchar telefono
+        varchar dni
+        varchar referencia
+        boolean sexo
+        varchar rangoEdad
+        boolean activo
+    }
+    tipos_evento {
+        smallint id PK
+        varchar nombre
+        boolean activo
+    }
+    tipos_servicio {
+        smallint id PK
+        varchar nombre
+        varchar descripcion
+        boolean activo
+    }
+    estados_contrato {
+        smallint id PK
+        varchar nombre
+    }
+    eventos {
+        serial id PK
+        int idCliente FK
+        smallint idTipoEvento FK
+        varchar direccion
+        timestamp fechaHora
+        varchar notas
+    }
+    evento_servicios {
+        serial id PK
+        int idEvento FK
+        smallint idTipoServicio FK
+        decimal precio
+    }
+    detalle_fotografia {
+        serial id PK
+        int idEventoServicio FK
+        boolean esDigital
+        boolean esFisica
+        varchar tipoPapel
+        varchar notas
+    }
+    detalle_filmacion {
+        serial id PK
+        int idEventoServicio FK
+        boolean incluyeHighlight
+        varchar notas
+    }
+    detalle_cuadrofirma {
+        serial id PK
+        int idEventoServicio FK
+        varchar descripcion
+    }
+    contratos {
+        serial id PK
+        int idEvento FK
+        smallint idEstado FK
+        varchar nombreCliente
+        varchar dniCliente
+        varchar telefonoCliente
+        varchar tipoEvento
+        varchar direccionEvento
+        timestamp fechaHoraEvento
+        decimal montoTotal
+        decimal montoAdelanto
+        decimal saldo
+        varchar metodoPago
+        varchar cuentaPago
+        varchar dniFotografo
+        date fechaContrato
+        varchar pdfUrl
+    }
+    proformas {
+        serial id PK
+        varchar nombreCliente
+        varchar tipoEvento
+        date fechaEvento
+        varchar horario
+        varchar distrito
+        varchar referenciaDir
+        jsonb servicios
+        decimal total
+        decimal adelanto
+    }
+
+    clientes ||--o{ eventos : "idCliente"
+    tipos_evento ||--o{ eventos : "idTipoEvento"
+    eventos ||--o{ evento_servicios : "idEvento"
+    tipos_servicio ||--o{ evento_servicios : "idTipoServicio"
+    evento_servicios ||--o| detalle_fotografia : "idEventoServicio"
+    evento_servicios ||--o| detalle_filmacion : "idEventoServicio"
+    evento_servicios ||--o| detalle_cuadrofirma : "idEventoServicio"
+    eventos ||--o| contratos : "idEvento"
+    estados_contrato ||--o{ contratos : "idEstado"
 ```
 
 ---
 
 ### `tipos_evento`
 
-Catálogo de tipos de evento gestionado desde el sistema. Se relaciona tanto con
-`eventos` como con `contratos` para mantener consistencia en el historial.
+Catálogo administrable desde el sistema.
 
 | Campo | Tipo | Descripción |
 |---|---|---|
-| `id` | String (cuid) | Identificador único |
-| `nombre` | String | Nombre del tipo — ej: Boda, Quinceañera |
-| `activo` | Boolean | Permite desactivar tipos sin eliminarlos |
-| `creadoEn` | DateTime | Fecha de creación |
+| `id` | SMALLINT (PK) | Identificador numérico |
+| `nombre` | VARCHAR(100) | Ej: Boda, Quinceañera, Bautizo, Cumpleaños |
+| `activo` | BOOLEAN | Permite desactivar sin eliminar |
 
 ---
 
-### `clientes`
+### `tipos_servicio`
 
-Persona natural que contacta el servicio. Canal principal de comunicación: WhatsApp.
+Catálogo de servicios que ofrece Miguel Producciones.
 
 | Campo | Tipo | Descripción |
 |---|---|---|
-| `id` | String (cuid) | Identificador único |
-| `nombre` | String | Nombre completo |
-| `telefono` | String | Número de WhatsApp |
-| `email` | String? | Opcional |
-| `notas` | String? | Observaciones internas |
-| `creadoEn` | DateTime | — |
-| `actualizadoEn` | DateTime | Actualización automática |
+| `id` | SMALLINT (PK) | Identificador numérico |
+| `nombre` | VARCHAR(100) | Ej: Fotografía, Filmación, Cuadro Firma |
+| `descripcion` | VARCHAR(200) | Descripción breve |
+| `activo` | BOOLEAN | Permite desactivar sin eliminar |
 
----
+**Servicios iniciales:**
 
-### `eventos`
-
-Fecha contratada con su cliente asociado. Un mismo cliente puede tener múltiples
-eventos y el equipo puede cubrir varios simultáneamente el mismo día y hora.
-
-| Campo | Tipo | Descripción |
-|---|---|---|
-| `id` | String (cuid) | Identificador único |
-| `nombre` | String | Nombre descriptivo — ej: "Boda García - Castillo" |
-| `fecha` | DateTime | Fecha y hora del evento |
-| `clienteId` | String (FK) | Cliente que contrató el servicio |
-| `tipoEventoId` | String (FK) | Referencia a `tipos_evento` |
-| `estado` | Enum | Ver estados más abajo |
-| `notas` | String? | Observaciones internas |
-| `creadoEn` | DateTime | — |
-| `actualizadoEn` | DateTime | — |
-
-**Ciclo de vida del evento:**
-
-```mermaid
-stateDiagram-v2
-    [*] --> Pendiente
-    Pendiente --> EnEntrega : Evento realizado
-    EnEntrega --> Completado : Producto entregado
-    Pendiente --> Cancelado
-```
-
----
-
-### `paquetes`
-
-Plantillas comerciales con valores predeterminados que agilizan la creación de proformas.
-Al elegir un paquete, sus valores se heredan y pueden modificarse libremente antes de
-confirmar la proforma. Los paquetes también pueden ignorarse — toda proforma puede
-crearse desde cero.
-
-Modificar un paquete no afecta las proformas ya generadas.
-
-| Campo | Tipo | Default | Descripción |
-|---|---|---|---|
-| `id` | String (cuid) | — | Identificador único |
-| `nombre` | String | — | Nombre comercial del paquete |
-| `descripcion` | String? | — | Descripción visible al cliente |
-| `incluyeFotografia` | Boolean | — | Servicio de fotografía incluido |
-| `fotosIlimitadas` | Boolean | — | Sin límite de fotografías |
-| `fotosDigitales` | Boolean | — | Entrega en formato digital |
-| `fotosFisicas` | Boolean | — | Entrega en impresión física |
-| `cantidadFotos` | Int? | `null` | Cantidad en decenas si no es ilimitada |
-| `tipoPapel` | Enum? | `null` | BRILLO o MATE — solo aplica si es física |
-| `incluyeVideo` | Boolean | — | Servicio de video incluido |
-| `tiempoCobertura` | Int | — | Horas de cobertura |
-| `incluyeMovilidad` | Boolean | — | Movilidad del equipo incluida |
-| `personalCompleto` | Boolean | — | `true` = fotógrafo + filmador / `false` = un solo personal |
-| `precio` | Decimal(10,2) | — | Precio base en Soles (PEN) |
-| `activo` | Boolean | `true` | Permite desactivar sin eliminar |
-| `creadoEn` | DateTime | — | — |
-
-**Niveles disponibles:**
-
-| Paquete | Perfil |
+| id | Nombre |
 |---|---|
-| **Recuerdo** | Un personal, cobertura corta, fotos digitales limitadas |
-| **Cobertura** | Cobertura estándar, fotos digitales ilimitadas, opción de un personal o dos |
-| **Producción** | Fotógrafo + filmador, cobertura extendida, fotos ilimitadas con opción física |
+| 1 | Fotografía |
+| 2 | Filmación |
+| 3 | Cuadro Firma |
 
 ---
 
-### `proformas`
+### `estados_contrato`
 
-Documento de cotización enviado al cliente por WhatsApp antes de confirmar el servicio.
-Se genera como PDF al vuelo desde los datos almacenados — no se guarda el archivo.
-Si el cliente necesita verlo nuevamente, el PDF se regenera idéntico en cualquier momento.
-
-El PDF de proforma no se almacena porque es un documento de consulta cuyo contenido
-puede reconstruirse fielmente desde la base de datos. Almacenarlo sería redundante.
-
-| Campo | Tipo | Default | Descripción |
-|---|---|---|---|
-| `id` | String (cuid) | — | Identificador único |
-| `eventoId` | String (FK) | — | Evento al que corresponde |
-| `paqueteId` | String? (FK) | `null` | Paquete de origen si se creó desde uno |
-| `incluyeFotografia` | Boolean | `true` | Fotografía incluida |
-| `fotosIlimitadas` | Boolean | `true` | Sin límite de fotografías |
-| `fotosDigitales` | Boolean | `true` | Entrega digital |
-| `fotosFisicas` | Boolean | `false` | Entrega física impresa |
-| `cantidadFotos` | Int? | `null` | Decenas — solo si no es ilimitada |
-| `tipoPapel` | Enum? | `null` | BRILLO o MATE — solo si es física |
-| `incluyeVideo` | Boolean | `false` | Video incluido |
-| `tiempoCobertura` | Int | — | Horas de cobertura |
-| `incluyeMovilidad` | Boolean | `false` | Movilidad incluida |
-| `personalCompleto` | Boolean | `true` | Fotógrafo + filmador |
-| `montoTotal` | Decimal(10,2) | — | Total cotizado en Soles (PEN) |
-| `notas` | String? | — | Observaciones adicionales |
-| `creadoEn` | DateTime | — | — |
-
-> **Regla de negocio:** fotografía física ilimitada no está disponible.
-> Si `fotosFisicas = true` entonces `fotosIlimitadas` debe ser `false`.
-
----
-
-### `contratos`
-
-Documento formal del acuerdo entre las partes. A diferencia de la proforma,
-el PDF **se almacena permanentemente en Supabase Storage** — si el template cambia
-en el futuro, el contrato original queda congelado exactamente como fue firmado.
-
-Un contrato puede originarse desde una proforma — en ese caso hereda sus valores
-como punto de partida, editables antes de confirmar. También puede crearse directamente
-sin proforma cuando el acuerdo se cierra sin tiempo para cotizar previamente.
-
-Los campos del evento (fecha, hora, dirección, tipo) se almacenan directamente en el
-contrato como datos propios. Aunque esa información ya existe en `eventos`, su
-desnormalización garantiza que el contrato refleje el acuerdo tal como fue firmado,
-independientemente de ediciones futuras al registro del evento.
-
-**Sección: datos del evento**
-
-| Campo | Tipo | Descripción |
+| id | Estado | Descripción |
 |---|---|---|
-| `fechaEvento` | DateTime | Fecha del evento |
-| `horaEvento` | String | Hora de inicio de la cobertura |
-| `direccionEvento` | String | Dirección exacta |
-| `tipoEventoId` | String (FK) | Tipo de evento contratado |
-
-**Sección: servicio contratado**
-
-Los mismos campos de fotografía y video que en `proformas`.
-Si el contrato se origina desde una proforma, estos valores se heredan automáticamente.
-
-**Sección: montos y pago**
-
-| Campo | Tipo | Descripción |
-|---|---|---|
-| `montoTotal` | Decimal(10,2) | Total del servicio en Soles (PEN) |
-| `montoAdelanto` | Decimal(10,2) | Adelanto recibido para separar la fecha |
-| `metodoPago` | Enum | EFECTIVO, YAPE, TRANSFERENCIA |
-| `cuentaPago` | String? | Número de cuenta o número de Yape |
-
-El contrato especifica que al concluir el evento se cancela el saldo restante.
-
-**Sección: firmas**
-
-| Campo | Tipo | Descripción |
-|---|---|---|
-| `dniFotografo` | String | DNI del representante de la empresa |
-| `dniCliente` | String | DNI del cliente que firma |
-| `fechaContrato` | DateTime | Fecha de firma |
-| `pdfUrl` | String? | URL del PDF en Supabase Storage |
-
-**Cláusulas fijas incluidas en el PDF:**
-- El adelanto no se reintegra por ningún motivo.
-- Pasados 30 días desde la fecha del evento, no hay lugar a reclamo por pérdida
-  o deterioro del material entregado o por entregar.
-
-**Ciclo de vida del contrato:**
+| 1 | Pendiente | Contrato creado, evento aún no ocurre |
+| 2 | Activo | Día del evento |
+| 3 | Pendiente de entrega | Evento concluido, producto en preparación |
+| 4 | Terminado | Entrega confirmada manualmente |
+| 5 | Cancelado | Contrato anulado |
 
 ```mermaid
 stateDiagram-v2
     [*] --> Pendiente
     Pendiente --> Activo : Día del evento
     Activo --> PendienteEntrega : Evento concluido
-    PendienteEntrega --> Terminado : Entrega confirmada
+    PendienteEntrega --> Terminado : Confirmación manual
     Pendiente --> Cancelado
     Activo --> Cancelado
 ```
 
-La transición a `Terminado` se habilita mediante un control simple que aparece
-únicamente después de la fecha del evento, para no entorpecer el flujo operativo diario.
+La opción de marcar como `Terminado` aparece únicamente después de la fecha del
+evento — un control simple que no interrumpe el flujo operativo diario.
+
+---
+
+### `clientes`
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| `id` | SERIAL (PK) | Identificador autoincremental |
+| `nombre` | VARCHAR(150) | Nombre completo |
+| `telefono` | VARCHAR(30) | Número de WhatsApp |
+| `dni` | VARCHAR(12) | Documento de identidad |
+| `referencia` | VARCHAR(200) | Contexto de origen — ej: "Referido por García", "Facebook" |
+| `sexo` | BOOLEAN | `true` = masculino / `false` = femenino |
+| `rangoEdad` | VARCHAR(10) | `18-30`, `30-45`, `45+` — estimación para análisis |
+| `activo` | BOOLEAN | `true` por defecto |
+
+---
+
+### `eventos`
+
+Centro del sistema. Todo contrato se genera a partir de un evento.
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| `id` | SERIAL (PK) | Identificador autoincremental |
+| `idCliente` | INTEGER (FK) | Cliente que contrata el servicio |
+| `idTipoEvento` | SMALLINT (FK) | Tipo de evento |
+| `direccion` | VARCHAR(300) | Dirección del evento |
+| `fechaHora` | TIMESTAMP | Fecha y hora de inicio |
+| `notas` | TEXT | Observaciones internas opcionales |
+
+Un mismo cliente puede tener múltiples eventos. El equipo puede cubrir varios
+simultáneamente el mismo día y hora sin restricción en el sistema.
+
+---
+
+### `evento_servicios`
+
+Tabla intermedia que registra qué servicios tiene cada evento y su precio.
+Cada registro tiene su tabla de detalle correspondiente según el tipo de servicio.
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| `id` | SERIAL (PK) | Identificador autoincremental |
+| `idEvento` | INTEGER (FK) | Evento al que pertenece |
+| `idTipoServicio` | SMALLINT (FK) | Tipo de servicio contratado |
+| `precio` | DECIMAL(10,2) | Precio del servicio en Soles (PEN) |
+
+---
+
+### `detalle_fotografia`
+
+| Campo | Tipo | Default | Descripción |
+|---|---|---|---|
+| `id` | SERIAL (PK) | — | — |
+| `idEventoServicio` | INTEGER (FK) | — | Relación con `evento_servicios` |
+| `esDigital` | BOOLEAN | `true` | Entrega en formato digital |
+| `esFisica` | BOOLEAN | `false` | Entrega en impresión física |
+| `tipoPapel` | VARCHAR(10) | `null` | `BRILLO` o `MATE` — solo si `esFisica = true` |
+| `notas` | VARCHAR(300) | `null` | Observaciones adicionales |
+
+> Fotografía física es siempre limitada — no existe fotografía física ilimitada
+> como opción válida. La cantidad de fotos físicas se acuerda verbalmente y
+> se especifica en las notas del contrato.
+
+---
+
+### `detalle_filmacion`
+
+| Campo | Tipo | Default | Descripción |
+|---|---|---|---|
+| `id` | SERIAL (PK) | — | — |
+| `idEventoServicio` | INTEGER (FK) | — | Relación con `evento_servicios` |
+| `incluyeHighlight` | BOOLEAN | `true` | Video resumen del evento incluido |
+| `notas` | VARCHAR(300) | `null` | Observaciones adicionales |
+
+---
+
+### `detalle_cuadrofirma`
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| `id` | SERIAL (PK) | — |
+| `idEventoServicio` | INTEGER (FK) | Relación con `evento_servicios` |
+| `descripcion` | VARCHAR(300) | Descripción del servicio |
+
+---
+
+### `contratos`
+
+El contrato se genera automáticamente desde el evento con un solo botón.
+Al crearse, **desnormaliza** los datos del evento y del cliente — esto garantiza
+que el contrato refleje el acuerdo exactamente como fue firmado, con independencia
+de ediciones futuras al evento o al cliente.
+
+El PDF se almacena permanentemente en Supabase Storage.
+
+**Datos del evento** — copiados al momento de la firma
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| `idEvento` | INTEGER (FK) | Referencia al evento de origen |
+| `tipoEvento` | VARCHAR(100) | Copiado de `tipos_evento` |
+| `direccionEvento` | VARCHAR(300) | Copiada del evento |
+| `fechaHoraEvento` | TIMESTAMP | Copiada del evento |
+
+**Datos del cliente** — copiados al momento de la firma
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| `nombreCliente` | VARCHAR(150) | Copiado del cliente |
+| `dniCliente` | VARCHAR(12) | Copiado del cliente |
+| `telefonoCliente` | VARCHAR(30) | Copiado del cliente |
+
+**Montos y pago**
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| `montoTotal` | DECIMAL(10,2) | Total del servicio en Soles (PEN) |
+| `montoAdelanto` | DECIMAL(10,2) | Adelanto recibido para separar la fecha |
+| `saldo` | DECIMAL(10,2) | Monto restante a cancelar al finalizar |
+| `metodoPago` | VARCHAR(30) | EFECTIVO, YAPE, TRANSFERENCIA |
+| `cuentaPago` | VARCHAR(100) | Número de cuenta o número de Yape |
+
+**Firma y estado**
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| `idEstado` | SMALLINT (FK) | Estado actual del contrato |
+| `dniFotografo` | VARCHAR(12) | DNI del representante de la empresa |
+| `fechaContrato` | DATE | Fecha de firma |
+| `pdfUrl` | VARCHAR(500) | URL del PDF en Supabase Storage |
+
+**Cláusulas fijas en el PDF:**
+- El adelanto no se reintegra por ningún motivo.
+- Pasados 30 días desde la fecha del evento, no hay lugar a reclamo por pérdida
+  o deterioro del material entregado o por entregar.
+
+---
+
+### `proformas`
+
+Documento de cotización desechable, sin relación con ninguna otra tabla.
+Se genera como PDF al vuelo y no se almacena el archivo. El campo `servicios`
+usa JSONB por diseño deliberado — la proforma es un documento libre que debe
+adaptarse a cualquier combinación de servicios sin restricciones de schema.
+La validación de ese campo se aplica en el frontend.
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| `id` | SERIAL (PK) | — |
+| `nombreCliente` | VARCHAR(150) | Nombre — no es un cliente registrado aún |
+| `tipoEvento` | VARCHAR(100) | Descripción libre del tipo de evento |
+| `fechaEvento` | DATE | Fecha del evento |
+| `horario` | VARCHAR(50) | Ej: "09:00 PM — 12:00 AM" |
+| `distrito` | VARCHAR(100) | Distrito del evento |
+| `referenciaDir` | VARCHAR(200) | Referencia adicional opcional |
+| `servicios` | JSONB | Lista de servicios cotizados con sus precios |
+| `total` | DECIMAL(10,2) | Total cotizado en Soles (PEN) |
+| `adelanto` | DECIMAL(10,2) | Monto informativo de separación |
+| `creadoEn` | TIMESTAMP | Fecha de creación |
+
+**Estructura del campo `servicios`:**
+
+```json
+[
+  {
+    "nombre": "Fotografía Digital",
+    "descripcion": "Fotos ilimitadas · Edición incluida",
+    "entrega": "Link privado de descarga",
+    "precio": 150
+  },
+  {
+    "nombre": "Filmación Full HD",
+    "descripcion": "Video editado · Highlight incluido",
+    "entrega": "Link privado de descarga",
+    "precio": 200
+  }
+]
+```
 
 ---
 
@@ -315,14 +454,14 @@ sequenceDiagram
 
     U->>FE: Solicita PDF de proforma
     FE->>BE: GET /api/proformas/:id/pdf
-    BE->>DB: Consulta proforma + evento + cliente
+    BE->>DB: Consulta datos de la proforma
     DB-->>BE: Datos completos
     BE->>BE: Genera PDF en memoria
     BE-->>FE: PDF como stream
     FE-->>U: Descarga directa
 ```
 
-### Creación de contrato desde proforma
+### Generación de contrato desde evento
 
 ```mermaid
 sequenceDiagram
@@ -332,20 +471,16 @@ sequenceDiagram
     participant DB as PostgreSQL
     participant SB as Supabase
 
-    U->>FE: Crea contrato desde proforma
-    FE->>BE: GET /api/proformas/:id
-    BE-->>FE: Datos heredados
-    U->>FE: Completa y confirma
-    FE->>BE: POST /api/contratos
-    BE->>DB: Guarda contrato (Pendiente)
-    U->>FE: Genera PDF del contrato
-    FE->>BE: POST /api/contratos/:id/pdf
-    BE->>DB: Consulta contrato completo
-    BE->>BE: Genera PDF
+    U->>FE: Pulsa "Generar contrato" en el evento
+    FE->>BE: POST /api/contratos/desde-evento/:id
+    BE->>DB: Consulta evento + cliente + servicios + detalles
+    DB-->>BE: Datos completos
+    BE->>DB: Crea contrato con datos desnormalizados
+    BE->>BE: Genera PDF con @react-pdf/renderer
     BE->>SB: Sube PDF
     SB-->>BE: URL permanente
-    BE->>DB: Guarda pdfUrl
-    BE-->>FE: Contrato con URL del PDF
+    BE->>DB: Guarda pdfUrl en contrato
+    BE-->>FE: Contrato creado con URL del PDF
 ```
 
 ---
@@ -353,8 +488,8 @@ sequenceDiagram
 ## Enums del sistema
 
 ```
+RangoEdad:      18-30 | 30-45 | 45+
 TipoPapel:      BRILLO | MATE
 MetodoPago:     EFECTIVO | YAPE | TRANSFERENCIA
-EstadoEvento:   PENDIENTE | EN_ENTREGA | COMPLETADO | CANCELADO
-EstadoContrato: PENDIENTE | ACTIVO | PENDIENTE_ENTREGA | TERMINADO | CANCELADO
+EstadoContrato: Pendiente | Activo | PendienteEntrega | Terminado | Cancelado
 ```
