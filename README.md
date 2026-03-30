@@ -140,7 +140,7 @@ Configura además `JWT_SECRET` y `NODE_ENV=production` desde el panel de Railway
 
 | Documento | Descripción |
 |---|---|
-| [`docs/diseño-tecnico.md`](docs/diseño-tecnico.md) | Arquitectura, stack, diagramas, base de datos y decisiones técnicas |
+| [`docs/Diseño-Tecnico.md`](docs/Diseño-Tecnico.md) | Arquitectura, stack, diagramas, base de datos y decisiones técnicas |
 
 ---
 
