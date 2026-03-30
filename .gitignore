@@ -1,0 +1,24 @@
+# Dependencias - generadas con npm install, no van al repo
+node_modules/
+
+# Archivos compilados
+dist/
+
+# Variables de entorno - contienen credenciales reales
+.env
+.env.local
+.env.*.local
+
+# Prisma - cliente generado automaticamente, se regenera con "npx prisma generate"
+backend/src/generated/
+
+# Claude Code - configuracion local de la herramienta
+.claude/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema operativo
+.DS_Store
+Thumbs.db

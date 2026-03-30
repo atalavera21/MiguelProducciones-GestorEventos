@@ -1,0 +1,136 @@
+// El "generator" le dice a Prisma qué cliente generar.
+// Nosotros queremos el cliente TypeScript para poder hacer:
+//   prisma.cliente.findMany()  — equivalente a _context.Clientes.ToList() en EF Core
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+// El "datasource" define el motor de base de datos.
+// La URL de conexión viene de prisma.config.ts → process.env.DATABASE_URL
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// Equivalente a un enum en C#. PostgreSQL los almacena de forma eficiente.
+// ─────────────────────────────────────────────
+
+// Tipos de evento que maneja Miguel Producciones
+enum TipoEvento {
+  BODA
+  QUINCEANERA
+  BAUTIZO
+  BABY_SHOWER
+  CUMPLEANOS
+  SESION_FOTOGRAFICA
+  OTRO
+}
+
+// Estados del ciclo de vida de un evento
+// Completado se asigna automáticamente al pasar la fecha (lógica en la app)
+enum EstadoEvento {
+  PENDIENTE    // Agendado, aún no ocurre
+  EN_ENTREGA   // Evento realizado, cliente esperando el producto
+  COMPLETADO   // Producto entregado
+  CANCELADO    // Se canceló antes del evento
+}
+
+// Estados del contrato
+enum EstadoContrato {
+  BORRADOR    // En preparación, aún no se envía al cliente
+  ENVIADO     // Enviado al cliente para revisión
+  FIRMADO     // Cliente aceptó y firmó
+  CANCELADO   // Contrato anulado
+}
+
+// ─────────────────────────────────────────────
+// MODELOS
+// Cada modelo = una tabla en PostgreSQL
+// Equivalente a una clase de entidad en EF Core
+// ─────────────────────────────────────────────
+
+// Representa a la persona que contrata el servicio.
+// Equivalente a: public class Cliente { ... } con [Table("clientes")]
+model Cliente {
+  id        String   @id @default(cuid()) // cuid() genera IDs únicos como "clh3z5a...". Equivale a Guid.NewGuid()
+  nombre    String
+  telefono  String                        // Número de WhatsApp — el canal principal de contacto
+  email     String?                       // El ? significa nullable. Equivale a string? en C#
+  notas     String?                       // Observaciones internas sobre el cliente
+
+  creadoEn    DateTime @default(now())   // Equivale a [DatabaseGenerated(DatabaseGeneratedOption.Identity)] con DateTime
+  actualizadoEn DateTime @updatedAt      // @updatedAt: Prisma actualiza este campo automáticamente en cada UPDATE
+
+  // Relación 1:N — un cliente puede tener varios eventos
+  // Equivale a: public ICollection<Evento> Eventos { get; set; }
+  eventos Evento[]
+
+  @@map("clientes") // Nombre real de la tabla en la BD. Sin esto sería "Cliente"
+}
+
+model Evento {
+  id          String      @id @default(cuid())
+  nombre      String                            // Ej: "Boda Castillo - García"
+  fecha       DateTime                          // Fecha y hora del evento
+  tipoEvento  TipoEvento
+  estado      EstadoEvento @default(PENDIENTE)  // Por defecto un evento nuevo es PENDIENTE
+  notas       String?                           // Observaciones internas
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  // Clave foránea — equivale a [ForeignKey("ClienteId")] en EF Core
+  clienteId String
+  cliente   Cliente @relation(fields: [clienteId], references: [id])
+
+  // Relaciones 1:N
+  proformas  Proforma[]
+  contratos  Contrato[]
+
+  @@map("eventos")
+}
+
+model Proforma {
+  id          String   @id @default(cuid())
+  montoTotal  Decimal  @db.Decimal(10, 2) // Decimal con 2 decimales. En C#: decimal con [Column(TypeName = "decimal(10,2)")]
+  descripcion String?                     // Descripción del servicio ofrecido
+  notas       String?
+
+  creadoEn DateTime @default(now())
+  // Las proformas no se actualizan — se generan al vuelo cada vez que se necesitan
+
+  // Clave foránea al evento
+  eventoId String
+  evento   Evento @relation(fields: [eventoId], references: [id])
+
+  // Una proforma puede convertirse en un contrato (relación opcional 1:1)
+  contrato Contrato?
+
+  @@map("proformas")
+}
+
+model Contrato {
+  id              String         @id @default(cuid())
+  estado          EstadoContrato @default(BORRADOR)
+  montoTotal      Decimal        @db.Decimal(10, 2)
+  montoAdelanto   Decimal        @db.Decimal(10, 2) // Cuánto pagó de adelanto
+  tiempoCobertura String                            // Ej: "8 horas", "10 horas"
+  fotosIncluidas  Int                               // Cantidad de fotos del paquete
+  condiciones     String?                           // Términos y condiciones del contrato
+  pdfUrl          String?                           // URL del PDF guardado en Supabase Storage
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  // Clave foránea al evento
+  eventoId String
+  evento   Evento @relation(fields: [eventoId], references: [id])
+
+  // Relación opcional con la proforma de origen (puede crearse sin proforma)
+  proformaId String?   @unique // @unique porque una proforma solo origina un contrato
+  proforma   Proforma? @relation(fields: [proformaId], references: [id])
+
+  @@map("contratos")
+}

@@ -1,0 +1,46 @@
+{
+  "compilerOptions": {
+    // El código compilado (JS) se guarda en dist/
+    "outDir": "./dist",
+
+    // El código fuente (TS) está en src/
+    "rootDir": "./src",
+
+    // Usamos módulos ES modernos internamente, pero compilamos a CommonJS
+    // porque Node.js lo maneja mejor sin configuración extra
+    "module": "commonjs",
+
+    // Apuntamos a ES2020 para tener async/await y features modernas
+    "target": "ES2020",
+
+    // Strict mode: TypeScript en su máxima exigencia.
+    // Equivalente a tener todas las advertencias activadas en C#.
+    // Sin esto, TypeScript se vuelve demasiado permisivo y pierde su valor.
+    "strict": true,
+
+    // Permite importar módulos JSON directamente (útil para configs)
+    "resolveJsonModule": true,
+
+    // Permite usar decoradores (los necesitaremos más adelante)
+    "experimentalDecorators": true,
+
+    // Interoperabilidad entre módulos CommonJS y ES Modules
+    "esModuleInterop": true,
+
+    // Fuerza que los imports sean case-sensitive (evita bugs en Linux/Railway)
+    "forceConsistentCasingInFileNames": true,
+
+    // Muestra errores si hay código que nunca se ejecuta
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+
+    // Asegura que cada archivo sea un módulo independiente
+    "isolatedModules": true,
+
+    // Necesario para que los tipos de Node.js estén disponibles (fs, path, etc.)
+    "lib": ["ES2020"],
+    "types": ["node"]
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
