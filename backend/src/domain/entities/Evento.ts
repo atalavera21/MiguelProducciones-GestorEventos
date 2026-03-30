@@ -1,46 +1,29 @@
-// Los enums definen los valores válidos para tipo y estado.
-// En .NET serían: public enum TipoEvento { Boda, Quinceanera, ... }
-export enum TipoEvento {
-  BODA = 'BODA',
-  QUINCEANERA = 'QUINCEANERA',
-  BAUTIZO = 'BAUTIZO',
-  BABY_SHOWER = 'BABY_SHOWER',
-  CUMPLEANOS = 'CUMPLEANOS',
-  SESION_FOTOGRAFICA = 'SESION_FOTOGRAFICA',
-  OTRO = 'OTRO',
-}
-
-export enum EstadoEvento {
-  PENDIENTE = 'PENDIENTE',
-  EN_ENTREGA = 'EN_ENTREGA',
-  COMPLETADO = 'COMPLETADO',
-  CANCELADO = 'CANCELADO',
-}
+// Centro del sistema — todo contrato se genera desde un evento.
+// idTipoEvento referencia la tabla catálogo tipos_evento en lugar
+// de un enum fijo, lo que permite agregar tipos sin cambiar código.
 
 export interface Evento {
-  id: string;
-  nombre: string;        // Ej: "Boda Castillo - García"
-  fecha: Date;
-  tipoEvento: TipoEvento;
-  estado: EstadoEvento;
-  notas?: string;
-  clienteId: string;     // Clave foránea — el ID del cliente dueño de este evento
-  creadoEn: Date;
-  actualizadoEn: Date;
+  id: number;
+  idCliente: number;       // FK → clientes
+  idTipoEvento: number;    // FK → tipos_evento (catálogo administrable)
+  direccion: string;
+  fechaHora: Date;         // Fecha y hora de inicio del evento
+  notas?: string;          // Observaciones internas del equipo
 }
 
+// Al crear un evento se registran también sus servicios (EventoServicio).
+// El estado del evento se deriva del estado de su contrato, no se guarda aquí.
 export interface CrearEventoDto {
-  nombre: string;
-  fecha: Date;
-  tipoEvento: TipoEvento;
-  clienteId: string;
+  idCliente: number;
+  idTipoEvento: number;
+  direccion: string;
+  fechaHora: Date;
   notas?: string;
 }
 
 export interface ActualizarEventoDto {
-  nombre?: string;
-  fecha?: Date;
-  tipoEvento?: TipoEvento;
-  estado?: EstadoEvento;
+  idTipoEvento?: number;
+  direccion?: string;
+  fechaHora?: Date;
   notas?: string;
 }

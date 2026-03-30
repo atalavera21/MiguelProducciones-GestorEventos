@@ -13,9 +13,13 @@ export class CreateEvento {
   async execute(dto: CrearEventoDto): Promise<Evento> {
     // Regla de negocio: no se puede agendar un evento para un cliente inexistente.
     // Este es el tipo de lógica que vive en Application, no en el Controller.
-    const cliente = await this.clienteRepository.findById(dto.clienteId);
+    const cliente = await this.clienteRepository.findById(dto.idCliente);
     if (!cliente) {
-      throw new Error(`No se puede crear el evento: cliente "${dto.clienteId}" no existe`);
+      throw new Error(`No se puede crear el evento: cliente ${dto.idCliente} no existe`);
+    }
+
+    if (!cliente.activo) {
+      throw new Error(`No se puede crear el evento: cliente ${dto.idCliente} está inactivo`);
     }
 
     return this.eventoRepository.create(dto);

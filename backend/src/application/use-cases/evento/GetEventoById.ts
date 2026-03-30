@@ -4,10 +4,10 @@ import { type IEventoRepository } from '../../../domain/repositories/IEventoRepo
 export class GetEventoById {
   constructor(private readonly eventoRepository: IEventoRepository) {}
 
-  async execute(id: string): Promise<Evento> {
+  async execute(id: number): Promise<Evento> {
     const evento = await this.eventoRepository.findById(id);
     if (!evento) {
-      throw new Error(`Evento con id "${id}" no encontrado`);
+      throw new Error(`Evento con id ${id} no encontrado`);
     }
     return evento;
   }
