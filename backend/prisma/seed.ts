@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import bcrypt from 'bcrypt';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../src/generated/prisma/client';
 
@@ -22,6 +23,7 @@ async function main() {
   await prisma.tipoEvento.deleteMany();
   await prisma.tipoServicio.deleteMany();
   await prisma.estadoContrato.deleteMany();
+  await prisma.usuario.deleteMany();
 
   console.log('Tablas limpiadas');
 
@@ -69,6 +71,62 @@ async function main() {
   });
 
   console.log('Estados de contrato creados');
+
+  // ─── Usuarios del sistema ─────────────────────────────────────────────────
+  // Sin registro público — los usuarios se crean aquí.
+  // Las contraseñas vienen de variables de entorno para no hardcodearlas.
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  const duenoPassword = process.env.SEED_DUENO_PASSWORD;
+  const demoPassword  = process.env.SEED_DEMO_PASSWORD;
+
+  if (!adminPassword || !duenoPassword || !demoPassword) {
+    throw new Error(
+      'Faltan variables de entorno: SEED_ADMIN_PASSWORD, SEED_DUENO_PASSWORD, SEED_DEMO_PASSWORD'
+    );
+  }
+
+  const BCRYPT_ROUNDS = 12;
+
+  const usuarios = [
+    {
+      alias: 'adrian',
+      email: 'admin@gestoreventos.local',
+      nombre: 'Adrián Talavera',
+      rol: 'ADMIN' as const,
+      password: adminPassword,
+    },
+    {
+      alias: 'miguel',
+      email: 'dueno@gestoreventos.local',
+      nombre: 'Miguel Talavera',
+      rol: 'DUENO' as const,
+      password: duenoPassword,
+    },
+    {
+      alias: 'demo',
+      email: 'demo@gestoreventos.local',
+      nombre: 'Usuario Demo',
+      descripcion: 'Cuenta de demostración — solo visualización',
+      rol: 'VIEWER' as const,
+      password: demoPassword,
+    },
+  ];
+
+  for (const u of usuarios) {
+    const passwordHash = await bcrypt.hash(u.password, BCRYPT_ROUNDS);
+    await prisma.usuario.create({
+      data: {
+        alias: u.alias,
+        email: u.email,
+        nombre: u.nombre,
+        descripcion: u.descripcion,
+        rol: u.rol,
+        passwordHash,
+      },
+    });
+    console.log(`Usuario creado: ${u.alias} (${u.rol})`);
+  }
+
   console.log('\nSeed completado exitosamente');
 }
 

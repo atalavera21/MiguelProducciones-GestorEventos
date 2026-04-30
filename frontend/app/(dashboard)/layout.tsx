@@ -1,5 +1,4 @@
-// Layout compartido por todas las páginas del dashboard.
-// Aquí irá la barra de navegación lateral y el header una vez que los construyamos.
+import { Sidebar } from '../../components/layout/Sidebar';
 
 export default function DashboardLayout({
   children,
@@ -7,9 +6,11 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div>
-      {/* TODO: Sidebar + Header */}
-      <main>{children}</main>
+    <div className="flex">
+      <Sidebar />
+      <main className="ml-60 flex-1 bg-bg-base min-h-screen p-6">
+        {children}
+      </main>
     </div>
   );
 }

@@ -7,6 +7,9 @@ CREATE TYPE "tipo_papel" AS ENUM ('BRILLO', 'MATE');
 -- CreateEnum
 CREATE TYPE "metodo_pago" AS ENUM ('EFECTIVO', 'YAPE', 'TRANSFERENCIA');
 
+-- CreateEnum
+CREATE TYPE "rol_usuario" AS ENUM ('ADMIN', 'DUENO', 'VIEWER');
+
 -- CreateTable
 CREATE TABLE "tipos_evento" (
     "id" SMALLSERIAL NOT NULL,
@@ -56,6 +59,7 @@ CREATE TABLE "eventos" (
     "direccion" VARCHAR(300) NOT NULL,
     "fechaHora" TIMESTAMP(3) NOT NULL,
     "notas" TEXT,
+    "activo" BOOLEAN NOT NULL DEFAULT true,
 
     CONSTRAINT "eventos_pkey" PRIMARY KEY ("id")
 );
@@ -141,6 +145,22 @@ CREATE TABLE "proformas" (
     CONSTRAINT "proformas_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "usuarios" (
+    "id" SERIAL NOT NULL,
+    "alias" VARCHAR(50) NOT NULL,
+    "email" VARCHAR(150) NOT NULL,
+    "passwordHash" VARCHAR(255) NOT NULL,
+    "nombre" VARCHAR(150) NOT NULL,
+    "descripcion" VARCHAR(300),
+    "rol" "rol_usuario" NOT NULL DEFAULT 'VIEWER',
+    "activo" BOOLEAN NOT NULL DEFAULT true,
+    "creadoEn" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "actualizadoEn" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "usuarios_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "detalle_fotografia_idEventoServicio_key" ON "detalle_fotografia"("idEventoServicio");
 
@@ -152,6 +172,12 @@ CREATE UNIQUE INDEX "detalle_cuadrofirma_idEventoServicio_key" ON "detalle_cuadr
 
 -- CreateIndex
 CREATE UNIQUE INDEX "contratos_idEvento_key" ON "contratos"("idEvento");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "usuarios_alias_key" ON "usuarios"("alias");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "usuarios_email_key" ON "usuarios"("email");
 
 -- AddForeignKey
 ALTER TABLE "eventos" ADD CONSTRAINT "eventos_idCliente_fkey" FOREIGN KEY ("idCliente") REFERENCES "clientes"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

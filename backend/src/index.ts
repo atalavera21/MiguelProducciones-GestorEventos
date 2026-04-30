@@ -3,6 +3,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import apiRoutes from './presentation/routes';
+import { errorHandler } from './presentation/middlewares/error.middleware';
 
 const app = express();
 
@@ -22,8 +23,11 @@ app.get('/health', (_req, res) => {
 });
 
 // Todas las rutas de la API viven bajo /api
-// Equivale a MapControllers() con una convención de prefijo en .NET
 app.use('/api', apiRoutes);
+
+// --- Error handler global ---
+// DEBE ir después de las rutas. Cualquier next(error) llega aquí.
+app.use(errorHandler);
 
 // --- Arranque ---
 const PORT = process.env.PORT ?? 3001;

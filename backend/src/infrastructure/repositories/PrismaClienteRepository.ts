@@ -20,7 +20,9 @@ const DOMINIO_A_PRISMA: Record<RangoEdad, string> = {
 export class PrismaClienteRepository implements IClienteRepository {
 
   async findAll(): Promise<Cliente[]> {
+    // Por defecto solo clientes activos — los archivados se consultan vía findById
     const clientes = await prisma.cliente.findMany({
+      where: { activo: true },
       orderBy: { nombre: 'asc' },
     });
     return clientes.map(this.toDomain);
@@ -72,9 +74,14 @@ export class PrismaClienteRepository implements IClienteRepository {
     }
   }
 
+  // Soft delete: marca el cliente como archivado en vez de borrar el registro.
+  // Preserva el historial de eventos y contratos asociados.
   async delete(id: number): Promise<boolean> {
     try {
-      await prisma.cliente.delete({ where: { id } });
+      await prisma.cliente.update({
+        where: { id },
+        data:  { activo: false },
+      });
       return true;
     } catch {
       return false;

@@ -1,5 +1,6 @@
 import { type Evento } from '../../../domain/entities/Evento';
 import { type IEventoRepository } from '../../../domain/repositories/IEventoRepository';
+import { NotFoundError } from '../../../shared/errors/AppError';
 
 export class GetEventoById {
   constructor(private readonly eventoRepository: IEventoRepository) {}
@@ -7,7 +8,7 @@ export class GetEventoById {
   async execute(id: number): Promise<Evento> {
     const evento = await this.eventoRepository.findById(id);
     if (!evento) {
-      throw new Error(`Evento con id ${id} no encontrado`);
+      throw new NotFoundError(`Evento con id ${id} no encontrado`);
     }
     return evento;
   }

@@ -4,21 +4,53 @@
 
 export interface Evento {
   id: number;
-  idCliente: number;       // FK → clientes
-  idTipoEvento: number;    // FK → tipos_evento (catálogo administrable)
+  idCliente: number;
+  idTipoEvento: number;
   direccion: string;
-  fechaHora: Date;         // Fecha y hora de inicio del evento
-  notas?: string;          // Observaciones internas del equipo
+  fechaHora: Date;
+  notas?: string;
+  activo: boolean;
 }
 
-// Al crear un evento se registran también sus servicios (EventoServicio).
-// El estado del evento se deriva del estado de su contrato, no se guarda aquí.
+// EventoResumen: versión enriquecida para listados (agenda/calendario).
+// Incluye nombres de catálogo para evitar N+1 en el frontend.
+export interface EventoResumen extends Evento {
+  nombreCliente: string;
+  nombreTipoEvento: string;
+}
+
+export interface DetallesFotografiaDto {
+  esDigital: boolean;
+  esFisica: boolean;
+  tipoPapel?: 'BRILLO' | 'MATE' | null;
+  notas?: string | null;
+}
+
+export interface DetallesFilmacionDto {
+  incluyeHighlight: boolean;
+  notas?: string | null;
+}
+
+export interface DetallesCuadroFirmaDto {
+  descripcion: string;
+}
+
+export interface CrearServicioEventoDto {
+  idTipoServicio: number;
+  precio: number;
+  detalleFotografia?: DetallesFotografiaDto;
+  detalleFilmacion?: DetallesFilmacionDto;
+  detalleCuadroFirma?: DetallesCuadroFirmaDto;
+}
+
+// Al crear un evento se registran también sus servicios en la misma transacción.
 export interface CrearEventoDto {
   idCliente: number;
   idTipoEvento: number;
   direccion: string;
   fechaHora: Date;
   notas?: string;
+  servicios?: CrearServicioEventoDto[];
 }
 
 export interface ActualizarEventoDto {

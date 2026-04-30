@@ -1,4 +1,4 @@
-import { type Request, type Response } from 'express';
+import { type Request, type Response, type NextFunction } from 'express';
 
 import { GetAllEventos } from '../../application/use-cases/evento/GetAllEventos';
 import { GetEventoById } from '../../application/use-cases/evento/GetEventoById';
@@ -8,75 +8,61 @@ import { DeleteEvento } from '../../application/use-cases/evento/DeleteEvento';
 import { PrismaEventoRepository } from '../../infrastructure/repositories/PrismaEventoRepository';
 import { PrismaClienteRepository } from '../../infrastructure/repositories/PrismaClienteRepository';
 import { PrismaContratoRepository } from '../../infrastructure/repositories/PrismaContratoRepository';
+import { crearEventoSchema, actualizarEventoSchema } from '../schemas/evento.schema';
 
 export class EventoController {
-  private readonly getAllEventos: GetAllEventos;
-  private readonly getEventoById: GetEventoById;
-  private readonly createEvento: CreateEvento;
-  private readonly updateEvento: UpdateEvento;
-  private readonly deleteEvento: DeleteEvento;
+  private readonly getAll: GetAllEventos;
+  private readonly getById: GetEventoById;
+  private readonly create: CreateEvento;
+  private readonly update: UpdateEvento;
+  private readonly delete_: DeleteEvento;
 
   constructor() {
-    const eventoRepository    = new PrismaEventoRepository();
-    const clienteRepository   = new PrismaClienteRepository();
-    const contratoRepository  = new PrismaContratoRepository();
+    const eventoRepo   = new PrismaEventoRepository();
+    const clienteRepo  = new PrismaClienteRepository();
+    const contratoRepo = new PrismaContratoRepository();
 
-    this.getAllEventos  = new GetAllEventos(eventoRepository);
-    this.getEventoById = new GetEventoById(eventoRepository);
-    this.createEvento  = new CreateEvento(eventoRepository, clienteRepository);
-    this.updateEvento  = new UpdateEvento(eventoRepository);
-    // DeleteEvento necesita contratoRepository para verificar que no haya
-    // un contrato activo antes de eliminar el evento
-    this.deleteEvento  = new DeleteEvento(eventoRepository, contratoRepository);
+    this.getAll  = new GetAllEventos(eventoRepo);
+    this.getById = new GetEventoById(eventoRepo);
+    this.create  = new CreateEvento(eventoRepo, clienteRepo);
+    this.update  = new UpdateEvento(eventoRepo);
+    this.delete_ = new DeleteEvento(eventoRepo, contratoRepo);
   }
 
-  // GET /api/eventos
-  getAll = async (_req: Request, res: Response): Promise<void> => {
+  listar = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const eventos = await this.getAllEventos.execute();
+      const eventos = await this.getAll.execute();
       res.json({ data: eventos });
-    } catch (error) {
-      res.status(500).json({ error: 'Error al obtener los eventos' });
-    }
+    } catch (e) { next(e); }
   };
 
-  // GET /api/eventos/:id
-  getById = async (req: Request, res: Response): Promise<void> => {
+  obtener = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const evento = await this.getEventoById.execute(Number(req.params.id));
+      const evento = await this.getById.execute(Number(req.params.id));
       res.json({ data: evento });
-    } catch (error) {
-      res.status(404).json({ error: (error as Error).message });
-    }
+    } catch (e) { next(e); }
   };
 
-  // POST /api/eventos
-  create = async (req: Request, res: Response): Promise<void> => {
+  crear = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const evento = await this.createEvento.execute(req.body);
+      const input = crearEventoSchema.parse(req.body);
+      const evento = await this.create.execute(input);
       res.status(201).json({ data: evento });
-    } catch (error) {
-      res.status(400).json({ error: (error as Error).message });
-    }
+    } catch (e) { next(e); }
   };
 
-  // PATCH /api/eventos/:id
-  update = async (req: Request, res: Response): Promise<void> => {
+  actualizar = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const evento = await this.updateEvento.execute(Number(req.params.id), req.body);
+      const input = actualizarEventoSchema.parse(req.body);
+      const evento = await this.update.execute(Number(req.params.id), input);
       res.json({ data: evento });
-    } catch (error) {
-      res.status(400).json({ error: (error as Error).message });
-    }
+    } catch (e) { next(e); }
   };
 
-  // DELETE /api/eventos/:id
-  remove = async (req: Request, res: Response): Promise<void> => {
+  eliminar = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      await this.deleteEvento.execute(Number(req.params.id));
+      await this.delete_.execute(Number(req.params.id));
       res.status(204).send();
-    } catch (error) {
-      res.status(404).json({ error: (error as Error).message });
-    }
+    } catch (e) { next(e); }
   };
 }

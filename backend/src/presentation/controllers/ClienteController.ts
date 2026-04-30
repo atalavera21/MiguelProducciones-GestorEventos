@@ -1,4 +1,4 @@
-import { type Request, type Response } from 'express';
+import { type Request, type Response, type NextFunction } from 'express';
 
 import { GetAllClientes } from '../../application/use-cases/cliente/GetAllClientes';
 import { GetClienteById } from '../../application/use-cases/cliente/GetClienteById';
@@ -6,71 +6,58 @@ import { CreateCliente } from '../../application/use-cases/cliente/CreateCliente
 import { UpdateCliente } from '../../application/use-cases/cliente/UpdateCliente';
 import { DeleteCliente } from '../../application/use-cases/cliente/DeleteCliente';
 import { PrismaClienteRepository } from '../../infrastructure/repositories/PrismaClienteRepository';
+import { crearClienteSchema, actualizarClienteSchema } from '../schemas/cliente.schema';
 
 export class ClienteController {
-  private readonly getAllClientes: GetAllClientes;
-  private readonly getClienteById: GetClienteById;
-  private readonly createCliente: CreateCliente;
-  private readonly updateCliente: UpdateCliente;
-  private readonly deleteCliente: DeleteCliente;
+  private readonly getAll: GetAllClientes;
+  private readonly getById: GetClienteById;
+  private readonly create: CreateCliente;
+  private readonly update: UpdateCliente;
+  private readonly delete_: DeleteCliente;
 
   constructor() {
-    const clienteRepository = new PrismaClienteRepository();
-
-    this.getAllClientes = new GetAllClientes(clienteRepository);
-    this.getClienteById = new GetClienteById(clienteRepository);
-    this.createCliente = new CreateCliente(clienteRepository);
-    this.updateCliente = new UpdateCliente(clienteRepository);
-    this.deleteCliente = new DeleteCliente(clienteRepository);
+    const repo = new PrismaClienteRepository();
+    this.getAll  = new GetAllClientes(repo);
+    this.getById = new GetClienteById(repo);
+    this.create  = new CreateCliente(repo);
+    this.update  = new UpdateCliente(repo);
+    this.delete_ = new DeleteCliente(repo);
   }
 
-  // GET /api/clientes
-  getAll = async (_req: Request, res: Response): Promise<void> => {
+  listar = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const clientes = await this.getAllClientes.execute();
+      const clientes = await this.getAll.execute();
       res.json({ data: clientes });
-    } catch (error) {
-      res.status(500).json({ error: 'Error al obtener los clientes' });
-    }
+    } catch (e) { next(e); }
   };
 
-  // GET /api/clientes/:id
-  getById = async (req: Request, res: Response): Promise<void> => {
+  obtener = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const cliente = await this.getClienteById.execute(Number(req.params.id));
+      const cliente = await this.getById.execute(Number(req.params.id));
       res.json({ data: cliente });
-    } catch (error) {
-      res.status(404).json({ error: (error as Error).message });
-    }
+    } catch (e) { next(e); }
   };
 
-  // POST /api/clientes
-  create = async (req: Request, res: Response): Promise<void> => {
+  crear = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const cliente = await this.createCliente.execute(req.body);
+      const input = crearClienteSchema.parse(req.body);
+      const cliente = await this.create.execute(input);
       res.status(201).json({ data: cliente });
-    } catch (error) {
-      res.status(400).json({ error: (error as Error).message });
-    }
+    } catch (e) { next(e); }
   };
 
-  // PATCH /api/clientes/:id
-  update = async (req: Request, res: Response): Promise<void> => {
+  actualizar = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const cliente = await this.updateCliente.execute(Number(req.params.id), req.body);
+      const input = actualizarClienteSchema.parse(req.body);
+      const cliente = await this.update.execute(Number(req.params.id), input);
       res.json({ data: cliente });
-    } catch (error) {
-      res.status(404).json({ error: (error as Error).message });
-    }
+    } catch (e) { next(e); }
   };
 
-  // DELETE /api/clientes/:id
-  remove = async (req: Request, res: Response): Promise<void> => {
+  eliminar = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      await this.deleteCliente.execute(Number(req.params.id));
+      await this.delete_.execute(Number(req.params.id));
       res.status(204).send();
-    } catch (error) {
-      res.status(404).json({ error: (error as Error).message });
-    }
+    } catch (e) { next(e); }
   };
 }

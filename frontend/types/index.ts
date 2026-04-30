@@ -1,15 +1,25 @@
 // Tipos que espeja el dominio del backend.
 // Se actualizan aquí cuando el contrato de la API cambia.
 
-export type Rol = 'admin' | 'dueno' | 'viewer';
+export type RolUsuario = 'ADMIN' | 'DUENO' | 'VIEWER';
+
+export type Rol = RolUsuario;
 
 export interface Usuario {
   id: number;
+  alias: string;
   nombre: string;
-  email: string;
-  rol: Rol;
+  rol: RolUsuario;
+  descripcion?: string;
 }
 
+export interface AuthState {
+  usuario: Usuario | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+}
+
+// Valores que viajan por la API — coinciden con los valores del enum del dominio
 export type RangoEdad = '18-30' | '30-45' | '45+';
 
 export interface Cliente {
@@ -46,6 +56,42 @@ export interface Evento {
   direccion: string;
   fechaHora: string;
   notas?: string;
+  activo: boolean;
+}
+
+// EventoResumen: versión enriquecida que devuelve GET /api/eventos
+export interface EventoResumen extends Evento {
+  nombreCliente: string;
+  nombreTipoEvento: string;
+}
+
+export type TipoPapel = 'BRILLO' | 'MATE';
+
+export interface CrearServicioPayload {
+  idTipoServicio: number;
+  precio: number;
+  detalleFotografia?: {
+    esDigital: boolean;
+    esFisica: boolean;
+    tipoPapel?: TipoPapel | null;
+    notas?: string | null;
+  };
+  detalleFilmacion?: {
+    incluyeHighlight: boolean;
+    notas?: string | null;
+  };
+  detalleCuadroFirma?: {
+    descripcion: string;
+  };
+}
+
+export interface CrearEventoPayload {
+  idCliente: number;
+  idTipoEvento: number;
+  direccion: string;
+  fechaHora: string;
+  notas?: string;
+  servicios: CrearServicioPayload[];
 }
 
 export type MetodoPago = 'EFECTIVO' | 'YAPE' | 'TRANSFERENCIA';

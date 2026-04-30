@@ -1,15 +1,15 @@
 import { Router } from 'express';
 import { ProformaController } from '../controllers/ProformaController';
+import { authMiddleware } from '../middlewares/auth.middleware';
+import { rolesMiddleware } from '../middlewares/roles.middleware';
 
 const router = Router();
 const controller = new ProformaController();
 
-// POST   /api/proformas      → crear proforma
-// GET    /api/proformas/:id  → obtener proforma por id
-// DELETE /api/proformas/:id  → eliminar proforma
+const soloEditores = [authMiddleware, rolesMiddleware(['ADMIN', 'DUENO'])];
 
-router.post('/', controller.create);
-router.get('/:id', controller.getById);
-router.delete('/:id', controller.remove);
+router.get('/:id',    controller.obtener);
+router.post('/',      soloEditores, controller.crear);
+router.delete('/:id', soloEditores, controller.eliminar);
 
 export default router;

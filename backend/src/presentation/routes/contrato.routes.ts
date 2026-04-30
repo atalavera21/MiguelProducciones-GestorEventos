@@ -1,15 +1,20 @@
 import { Router } from 'express';
 import { ContratoController } from '../controllers/ContratoController';
+import { authMiddleware } from '../middlewares/auth.middleware';
+import { rolesMiddleware } from '../middlewares/roles.middleware';
 
 const router = Router();
 const controller = new ContratoController();
 
-// POST   /api/contratos/desde-evento/:idEvento  → generar contrato desde un evento
-// GET    /api/contratos/:id                      → obtener contrato por id
-// PATCH  /api/contratos/:id/estado              → cambiar estado del contrato
+const soloEditores = [authMiddleware, rolesMiddleware(['ADMIN', 'DUENO'])];
 
-router.post('/desde-evento/:idEvento', controller.generar);
-router.get('/:id', controller.getById);
-router.patch('/:id/estado', controller.actualizarEstadoHandler);
+// Lectura pública
+router.get('/',    controller.listar);
+router.get('/:id', controller.obtener);
+
+// Mutaciones protegidas
+router.post('/desde-evento/:idEvento', soloEditores, controller.generarDesdeEvento);
+router.patch('/:id/estado',            soloEditores, controller.cambiarEstado);
+router.delete('/:id',                  soloEditores, controller.eliminar); // → transición a Cancelado
 
 export default router;

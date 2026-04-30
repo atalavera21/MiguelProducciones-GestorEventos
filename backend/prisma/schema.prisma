@@ -108,6 +108,7 @@ model Evento {
   direccion    String   @db.VarChar(300)
   fechaHora    DateTime
   notas        String?
+  activo       Boolean  @default(true)   // false = archivado (soft delete). Las listas filtran por activo=true
 
   cliente    Cliente      @relation(fields: [idCliente], references: [id])
   tipoEvento TipoEvento   @relation(fields: [idTipoEvento], references: [id])
@@ -223,4 +224,29 @@ model Proforma {
   creadoEn      DateTime @default(now())
 
   @@map("proformas")
+}
+
+// Roles de usuario del sistema
+enum RolUsuario {
+  ADMIN
+  DUENO
+  VIEWER
+
+  @@map("rol_usuario")
+}
+
+// Usuarios internos del sistema — sin registro público, creados por seed
+model Usuario {
+  id            Int        @id @default(autoincrement())
+  alias         String     @unique @db.VarChar(50)
+  email         String     @unique @db.VarChar(150)
+  passwordHash  String     @db.VarChar(255)
+  nombre        String     @db.VarChar(150)
+  descripcion   String?    @db.VarChar(300)
+  rol           RolUsuario @default(VIEWER)
+  activo        Boolean    @default(true)
+  creadoEn      DateTime   @default(now())
+  actualizadoEn DateTime   @updatedAt
+
+  @@map("usuarios")
 }

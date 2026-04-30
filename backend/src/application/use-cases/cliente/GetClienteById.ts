@@ -1,19 +1,15 @@
 import { type Cliente } from '../../../domain/entities/Cliente';
 import { type IClienteRepository } from '../../../domain/repositories/IClienteRepository';
+import { NotFoundError } from '../../../shared/errors/AppError';
 
 export class GetClienteById {
   constructor(private readonly clienteRepository: IClienteRepository) {}
 
   async execute(id: number): Promise<Cliente> {
     const cliente = await this.clienteRepository.findById(id);
-
-    // Si no existe el cliente, lanzamos un error con mensaje claro.
-    // El controller de la capa presentation lo capturará y devolverá un 404.
-    // En .NET harías: throw new NotFoundException($"Cliente {id} no encontrado");
     if (!cliente) {
-      throw new Error(`Cliente con id ${id} no encontrado`);
+      throw new NotFoundError(`Cliente con id ${id} no encontrado`);
     }
-
     return cliente;
   }
 }

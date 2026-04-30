@@ -1,22 +1,18 @@
 import { Router } from 'express';
 import { ClienteController } from '../controllers/ClienteController';
-
-// El Router de Express es equivalente a un [ApiController] + [Route("api/clientes")]
-// en .NET — agrupa las rutas relacionadas bajo un mismo prefijo.
+import { authMiddleware } from '../middlewares/auth.middleware';
+import { rolesMiddleware } from '../middlewares/roles.middleware';
 
 const router = Router();
 const controller = new ClienteController();
 
-// GET    /api/clientes        → listar todos
-// POST   /api/clientes        → crear uno nuevo
-// GET    /api/clientes/:id    → obtener uno por id
-// PATCH  /api/clientes/:id    → actualizar parcialmente
-// DELETE /api/clientes/:id    → eliminar
+// Mutaciones requieren JWT + rol ADMIN/DUENO. Lectura es pública.
+const soloEditores = [authMiddleware, rolesMiddleware(['ADMIN', 'DUENO'])];
 
-router.get('/', controller.getAll);
-router.post('/', controller.create);
-router.get('/:id', controller.getById);
-router.patch('/:id', controller.update);
-router.delete('/:id', controller.remove);
+router.get('/',         controller.listar);
+router.get('/:id',      controller.obtener);
+router.post('/',        soloEditores, controller.crear);
+router.patch('/:id',    soloEditores, controller.actualizar);
+router.delete('/:id',   soloEditores, controller.eliminar);
 
 export default router;

@@ -1,5 +1,5 @@
-import { type Contrato, type CrearContratoDto, type ActualizarContratoDto, MetodoPago } from '../../domain/entities/Contrato';
-import { type IContratoRepository } from '../../domain/repositories/IContratoRepository';
+import { type Contrato, type ActualizarContratoDto, MetodoPago } from '../../domain/entities/Contrato';
+import { type IContratoRepository, type ContratoNuevoData } from '../../domain/repositories/IContratoRepository';
 import prisma from '../database/prismaClient';
 
 export class PrismaContratoRepository implements IContratoRepository {
@@ -23,12 +23,29 @@ export class PrismaContratoRepository implements IContratoRepository {
     return this.toDomain(contrato);
   }
 
-  async create(dto: CrearContratoDto): Promise<Contrato> {
-    // El use case GenerarContrato es responsable de consultar el evento
-    // y el cliente para obtener los datos desnormalizados antes de llamar aquí.
+  async create(data: ContratoNuevoData): Promise<Contrato> {
+    // El use case GenerarContrato es responsable de construir el objeto completo
+    // (con todos los datos desnormalizados) antes de llamar aquí.
     // Este repositorio solo persiste — no tiene lógica de negocio.
     const contrato = await prisma.contrato.create({
-      data: dto as any,
+      data: {
+        idEvento:        data.idEvento,
+        idEstado:        data.idEstado,
+        nombreCliente:   data.nombreCliente,
+        dniCliente:      data.dniCliente,
+        telefonoCliente: data.telefonoCliente,
+        tipoEvento:      data.tipoEvento,
+        direccionEvento: data.direccionEvento,
+        fechaHoraEvento: data.fechaHoraEvento,
+        montoTotal:      data.montoTotal,
+        montoAdelanto:   data.montoAdelanto,
+        saldo:           data.saldo,
+        metodoPago:      data.metodoPago,
+        cuentaPago:      data.cuentaPago,
+        dniFotografo:    data.dniFotografo,
+        fechaContrato:   data.fechaContrato,
+        pdfUrl:          data.pdfUrl,
+      },
     });
     return this.toDomain(contrato);
   }
