@@ -5,9 +5,21 @@ node_modules/
 dist/
 
 # Variables de entorno - contienen credenciales reales
-.env
-.env.local
-.env.*.local
+.env*
+!.env.example
+
+# Llaves privadas y certificados
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+
+# Archivos de credenciales / secrets
+secrets/
+*credentials*.json
+*service-account*.json
 
 # Prisma - cliente generado automaticamente, se regenera con "npx prisma generate"
 backend/src/generated/
